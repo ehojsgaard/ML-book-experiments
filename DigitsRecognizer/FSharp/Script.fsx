@@ -1,6 +1,7 @@
 open System.IO
 
 type Observation = { Label:string; Pixels: int[] }
+type DistanceMeasure = int[] -> int[] -> int
 
 let toObservation (csvData:string) =
     let columns = csvData.Split(',')
@@ -20,22 +21,34 @@ let validationPath = dataPath + "validationsample.csv";
 let validationSet = reader validationPath
 
 
-let manhattanDistance (a1:int[]) (a2:int[]) =
+let manhattanDistance (a1:int[]) (a2:int[]) : int =
     Array.zip a1 a2
     |> Array.map (fun (i1, i2) -> abs (i1 - i2))
     |> Array.sum
 
-let train (trainingSet:Observation[]) =
+let euclideanDistance (a1:int[]) (a2:int[]) : int =
+    Array.zip a1 a2
+    |> Array.map (fun (i1, i2) -> pown (i1 - i2) 2)
+    |> Array.sum
+
+
+let train (trainingSet:Observation[]) (distanceMeasure:DistanceMeasure) =
     let classify (pixels:int[]) = 
         trainingSet
-        |> Array.minBy (fun x -> manhattanDistance x.Pixels pixels)
+        |> Array.minBy (fun x -> distanceMeasure x.Pixels pixels)
         |> fun x -> x.Label
     classify    
 
-let classifier = train trainingSet
+let classifierManhattan = train trainingSet manhattanDistance
+let classifierEuclidean = train trainingSet euclideanDistance
 
-let correctnessPct =
+let correctnessPctManhattan =
     validationSet
-    |> Array.averageBy (fun x -> if classifier x.Pixels = x.Label then 1. else 0.)
+    |> Array.averageBy (fun x -> if classifierManhattan x.Pixels = x.Label then 1. else 0.)
 
-printfn "Correct: %.3f"
+printfn "Manhattan Correct: %.3f%%" correctnessPctManhattan
+
+let correctnessPctEuclidean =
+    validationSet
+    |> Array.averageBy (fun x -> if classifierEuclidean x.Pixels = x.Label then 1. else 0.)
+printfn "Euclidean Correct: %.3f%%" correctnessPctEuclidean
